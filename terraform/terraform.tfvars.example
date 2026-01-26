@@ -1,0 +1,22 @@
+aws_region = "us-east-1"
+project_name = "starttech"
+environment = "prod"
+
+vpc_cidr = "10.0.0.0/16"
+public_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
+private_subnet_cidrs = ["10.0.10.0/24", "10.0.20.0/24"]
+
+instance_type = "t3.micro"
+min_size = 2
+max_size = 6
+desired_capacity = 2
+
+frontend_bucket_name = "starttech-frontend-bucket-unique-12345"
+log_group_name = "/aws/starttech/application"
+
+tags = {
+  Project     = "StartTech"
+  Environment = "Production"
+  ManagedBy   = "Terraform"
+  Owner       = "DevOps Team"
+}
