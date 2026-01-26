@@ -1,0 +1,124 @@
+{
+  "alarms": [
+    {
+      "AlarmName": "StartTech-ALB-HighResponseTime",
+      "AlarmDescription": "ALB response time is too high",
+      "MetricName": "TargetResponseTime",
+      "Namespace": "AWS/ApplicationELB",
+      "Statistic": "Average",
+      "Period": 300,
+      "EvaluationPeriods": 2,
+      "Threshold": 2.0,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "Dimensions": [
+        {
+          "Name": "LoadBalancer",
+          "Value": "starttech-alb"
+        }
+      ],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:ACCOUNT_ID:starttech-alerts"
+      ]
+    },
+    {
+      "AlarmName": "StartTech-ALB-High4xxErrors",
+      "AlarmDescription": "High number of 4xx errors from ALB",
+      "MetricName": "HTTPCode_Target_4XX_Count",
+      "Namespace": "AWS/ApplicationELB",
+      "Statistic": "Sum",
+      "Period": 300,
+      "EvaluationPeriods": 2,
+      "Threshold": 10,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "Dimensions": [
+        {
+          "Name": "LoadBalancer",
+          "Value": "starttech-alb"
+        }
+      ],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:ACCOUNT_ID:starttech-alerts"
+      ]
+    },
+    {
+      "AlarmName": "StartTech-ALB-High5xxErrors",
+      "AlarmDescription": "High number of 5xx errors from ALB",
+      "MetricName": "HTTPCode_Target_5XX_Count",
+      "Namespace": "AWS/ApplicationELB",
+      "Statistic": "Sum",
+      "Period": 300,
+      "EvaluationPeriods": 1,
+      "Threshold": 5,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "Dimensions": [
+        {
+          "Name": "LoadBalancer",
+          "Value": "starttech-alb"
+        }
+      ],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:ACCOUNT_ID:starttech-alerts"
+      ]
+    },
+    {
+      "AlarmName": "StartTech-EC2-HighCPU",
+      "AlarmDescription": "EC2 CPU utilization is too high",
+      "MetricName": "CPUUtilization",
+      "Namespace": "AWS/EC2",
+      "Statistic": "Average",
+      "Period": 300,
+      "EvaluationPeriods": 2,
+      "Threshold": 80,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "Dimensions": [
+        {
+          "Name": "AutoScalingGroupName",
+          "Value": "starttech-backend-asg"
+        }
+      ],
+      "AlarmActions": [
+        "arn:aws:autoscaling:us-east-1:ACCOUNT_ID:scalingPolicy:POLICY_ID:autoScalingGroupName/starttech-backend-asg:policyName/starttech-scale-up"
+      ]
+    },
+    {
+      "AlarmName": "StartTech-Redis-HighCPU",
+      "AlarmDescription": "Redis CPU utilization is too high",
+      "MetricName": "CPUUtilization",
+      "Namespace": "AWS/ElastiCache",
+      "Statistic": "Average",
+      "Period": 300,
+      "EvaluationPeriods": 2,
+      "Threshold": 75,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "Dimensions": [
+        {
+          "Name": "CacheClusterId",
+          "Value": "starttech-redis-001"
+        }
+      ],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:ACCOUNT_ID:starttech-alerts"
+      ]
+    },
+    {
+      "AlarmName": "StartTech-CloudFront-High4xxErrors",
+      "AlarmDescription": "High 4xx error rate from CloudFront",
+      "MetricName": "4xxErrorRate",
+      "Namespace": "AWS/CloudFront",
+      "Statistic": "Average",
+      "Period": 300,
+      "EvaluationPeriods": 2,
+      "Threshold": 5,
+      "ComparisonOperator": "GreaterThanThreshold",
+      "Dimensions": [
+        {
+          "Name": "DistributionId",
+          "Value": "DISTRIBUTION_ID"
+        }
+      ],
+      "AlarmActions": [
+        "arn:aws:sns:us-east-1:ACCOUNT_ID:starttech-alerts"
+      ]
+    }
+  ]
+}

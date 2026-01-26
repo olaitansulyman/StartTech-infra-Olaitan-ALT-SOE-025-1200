@@ -1,0 +1,65 @@
+# CloudWatch Logs Insights Queries for StartTech Application
+
+## Application Error Analysis
+fields @timestamp, @message
+| filter @message like /ERROR/
+| sort @timestamp desc
+| limit 100
+
+## API Response Time Analysis
+fields @timestamp, @message
+| filter @message like /response_time/
+| parse @message "response_time: * ms" as response_time
+| stats avg(response_time), max(response_time), min(response_time) by bin(5m)
+
+## Request Volume by Endpoint
+fields @timestamp, @message
+| filter @message like /GET|POST|PUT|DELETE/
+| parse @message "* * *" as method, endpoint, status
+| stats count() by endpoint
+| sort count desc
+
+## Error Rate by Status Code
+fields @timestamp, @message
+| filter @message like /status:/
+| parse @message "status: *" as status_code
+| stats count() by status_code
+| sort count desc
+
+## Application Health Check Status
+fields @timestamp, @message
+| filter @message like /health/
+| parse @message "health_status: *" as health_status
+| stats count() by health_status, bin(1m)
+
+## Database Connection Issues
+fields @timestamp, @message
+| filter @message like /database|mongo|connection/
+| sort @timestamp desc
+| limit 50
+
+## Memory Usage Patterns
+fields @timestamp, @message
+| filter @message like /memory_usage/
+| parse @message "memory_usage: * MB" as memory_mb
+| stats avg(memory_mb), max(memory_mb) by bin(5m)
+
+## User Session Analysis
+fields @timestamp, @message
+| filter @message like /session/
+| parse @message "session_id: * user_id: *" as session_id, user_id
+| stats count() by user_id
+| sort count desc
+| limit 20
+
+## Cache Hit/Miss Ratio
+fields @timestamp, @message
+| filter @message like /cache/
+| parse @message "cache_status: *" as cache_status
+| stats count() by cache_status, bin(5m)
+
+## Application Startup Time
+fields @timestamp, @message
+| filter @message like /startup_time/
+| parse @message "startup_time: * seconds" as startup_seconds
+| stats avg(startup_seconds) by bin(1h)

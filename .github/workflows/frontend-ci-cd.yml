@@ -1,0 +1,96 @@
+name: Frontend CI/CD
+
+on:
+  repository_dispatch:
+    types: [frontend-deploy]
+  workflow_dispatch:
+    inputs:
+      frontend_repo:
+        description: 'Frontend repository URL'
+        required: true
+        default: 'https://github.com/username/starttech-frontend'
+
+env:
+  AWS_REGION: 'us-east-1'
+  NODE_VERSION: '18'
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout infrastructure code
+      uses: actions/checkout@v4
+
+    - name: Checkout frontend code
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ github.event.client_payload.repo || github.event.inputs.frontend_repo }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+        path: frontend-app
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: frontend-app/package-lock.json
+
+    - name: Install dependencies
+      working-directory: frontend-app
+      run: npm ci
+
+    - name: Run security audit
+      working-directory: frontend-app
+      run: npm audit --audit-level=high
+
+    - name: Run tests
+      working-directory: frontend-app
+      run: npm test -- --coverage --watchAll=false
+
+    - name: Build application
+      working-directory: frontend-app
+      run: npm run build
+      env:
+        CI: false
+        REACT_APP_API_URL: ${{ secrets.REACT_APP_API_URL }}
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Get S3 bucket name
+      id: get-bucket
+      run: |
+        cd terraform
+        terraform init
+        BUCKET_NAME=$(terraform output -raw frontend_bucket_name)
+        echo "bucket_name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+
+    - name: Deploy to S3
+      run: |
+        aws s3 sync frontend-app/build/ s3://${{ steps.get-bucket.outputs.bucket_name }} --delete
+
+    - name: Get CloudFront distribution ID
+      id: get-cloudfront
+      run: |
+        cd terraform
+        DISTRIBUTION_ID=$(terraform output -raw cloudfront_distribution_id)
+        echo "distribution_id=$DISTRIBUTION_ID" >> $GITHUB_OUTPUT
+
+    - name: Invalidate CloudFront cache
+      run: |
+        aws cloudfront create-invalidation \
+          --distribution-id ${{ steps.get-cloudfront.outputs.distribution_id }} \
+          --paths "/*"
+
+    - name: Deployment Summary
+      run: |
+        echo "## Frontend Deployment Complete" >> $GITHUB_STEP_SUMMARY
+        echo "- **S3 Bucket**: ${{ steps.get-bucket.outputs.bucket_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **CloudFront Distribution**: ${{ steps.get-cloudfront.outputs.distribution_id }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Status**: ✅ Deployed successfully" >> $GITHUB_STEP_SUMMARY
