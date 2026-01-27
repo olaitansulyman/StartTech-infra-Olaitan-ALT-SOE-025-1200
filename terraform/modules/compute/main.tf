@@ -57,6 +57,19 @@ resource "aws_iam_instance_profile" "ec2_profile" {
   tags = var.tags
 }
 
+# ECR Repository for Backend Docker Images
+resource "aws_ecr_repository" "backend" {
+  name                 = "starttech-backend"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  tags = var.tags
+}
+
+
 # Security Group for ALB
 resource "aws_security_group" "alb" {
   name_prefix = "${var.tags.Project}-alb-"
