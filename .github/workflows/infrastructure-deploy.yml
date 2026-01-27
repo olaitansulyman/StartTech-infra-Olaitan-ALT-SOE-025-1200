@@ -47,8 +47,8 @@ jobs:
 
     - name: Terraform Plan
       working-directory: terraform
-      run: terraform plan -no-color
-      continue-on-error: true
+      run: terraform plan -var="mongodb_atlas_public_key=${{ secrets.MONGODB_ATLAS_PUBLIC_KEY }}" -var="mongodb_atlas_private_key=${{ secrets.MONGODB_ATLAS_PRIVATE_KEY }}" -var="mongodb_atlas_org_id=${{ secrets.MONGODB_ATLAS_ORG_ID }}" -out=tfplan
+
 
   terraform-apply:
     name: Terraform Apply
