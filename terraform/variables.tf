@@ -58,12 +58,6 @@ variable "desired_capacity" {
   default     = 2
 }
 
-variable "frontend_bucket_name" {
-  description = "S3 bucket name for frontend"
-  type        = string
-  default     = "starttech-frontend-bucket"
-}
-
 variable "log_group_name" {
   description = "CloudWatch log group name"
   type        = string
@@ -78,8 +72,9 @@ variable "tags" {
     Environment = "Production"
     ManagedBy   = "Terraform"
   }
+}
 
-  variable "mongodb_atlas_public_key" {
+variable "mongodb_atlas_public_key" {
   description = "MongoDB Atlas Public Key"
   type        = string
   sensitive   = true
@@ -94,6 +89,4 @@ variable "mongodb_atlas_private_key" {
 variable "mongodb_atlas_org_id" {
   description = "MongoDB Atlas Organization ID"
   type        = string
-}
-
 }
