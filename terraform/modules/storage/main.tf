@@ -77,16 +77,16 @@ resource "aws_s3_bucket_policy" "frontend" {
   })
 }
 
-# --- 3. REDIS (Caching Layer) ---
-resource "aws_security_group" "redis" {
-  name        = "${var.tags.Project}-redis-sg"
-  vpc_id      = var.vpc_id
-  ingress {
-    from_port       = 6379
-    to_port         = 6379
-    protocol        = "tcp"
-    security_groups = [var.backend_security_group_id] # Restrict to Backend only
-  }
+resource "mongodbatlas_cluster" "main" {
+  project_id = "697a25443cb38dd6ed4d44dd"  # your Project ID
+  name       = "my-m0-cluster"
+
+  provider_name               = "TENANT"
+  backing_provider_name       = "AWS"         # or GCP / AZURE
+  provider_region_name        = "US_EAST_1"   # your region
+  provider_instance_size_name = "M0"
+}
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -94,7 +94,7 @@ resource "aws_security_group" "redis" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   tags = var.tags
-}
+
 
 resource "aws_elasticache_subnet_group" "main" {
   name       = "${var.tags.Project}-redis-subnet-group"
