@@ -72,3 +72,6 @@ jobs:
       
       - name: Notify success
         run: echo "Infrastructure deployment complete"
+        
+  # Force cache refresh
+  # Cache ID: infrastructure-v4-2024
