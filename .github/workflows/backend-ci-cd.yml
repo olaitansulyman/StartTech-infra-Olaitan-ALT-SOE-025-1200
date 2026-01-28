@@ -1,0 +1,51 @@
+name: Backend CI/CD
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+  workflow_dispatch: {}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-east-1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+      - name: Run tests
+        run: |
+          cd backend
+          go test ./... 
+      - name: Build Docker image
+        run: |
+          cd backend
+          docker build -t starttech-backend:latest .
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Login to ECR
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+      - name: Create ECR repository
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          aws ecr describe-repositories --repository-names starttech-backend || aws ecr create-repository --repository-name starttech-backend
+      - name: Tag and push to ECR
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          docker tag starttech-backend:latest ${ACCOUNT_ID}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/starttech-backend:latest
+          docker push ${ACCOUNT_ID}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/starttech-backend:latest
+      - name: Trigger rolling update
+        run: |
+          ASG_NAME=${{ secrets.ASG_NAME }}
+          aws autoscaling start-instance-refresh --auto-scaling-group-name $ASG_NAME --preferences MinHealthyPercentage=50,InstanceWarmup=300
+      - name: Notify
+        run: echo "Backend deployed"

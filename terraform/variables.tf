@@ -96,3 +96,15 @@ variable "mongodb_atlas_password" {
   type        = string
   sensitive   = true
 }
+
+variable "use_secrets_manager" {
+  description = "Whether to store/read MongoDB credentials from AWS Secrets Manager"
+  type        = bool
+  default     = false
+}
+
+variable "mongodb_secret_name" {
+  description = "Name of the Secrets Manager secret to store MongoDB credentials (if enabled)"
+  type        = string
+  default     = ""
+}

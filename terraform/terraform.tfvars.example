@@ -18,6 +18,8 @@ mongodb_atlas_public_key  = "your-public-key-here"
 mongodb_atlas_private_key = "your-private-key-here"
 mongodb_atlas_org_id      = "your-org-id-here"
 mongodb_atlas_password    = "your-secure-password-here"
+use_secrets_manager       = false
+mongodb_secret_name       = "starttech-mongodb-secret"
 
 # S3 bucket name will be auto-generated with account ID to ensure uniqueness
 # Example: starttech-frontend-starttech-123456789012

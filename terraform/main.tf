@@ -36,6 +36,24 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+# --- Secrets Manager (optional) ---
+resource "aws_secretsmanager_secret" "mongodb" {
+  count = var.use_secrets_manager ? 1 : 0
+  name  = var.mongodb_secret_name != "" ? var.mongodb_secret_name : "${var.project_name}-mongodb"
+  tags  = var.tags
+}
+
+resource "aws_secretsmanager_secret_version" "mongodb" {
+  count       = var.use_secrets_manager ? 1 : 0
+  secret_id   = aws_secretsmanager_secret.mongodb[0].id
+  secret_string = jsonencode({ mongodb_password = var.mongodb_atlas_password })
+}
+
+data "aws_secretsmanager_secret_version" "mongodb" {
+  count     = var.use_secrets_manager ? 1 : 0
+  secret_id = aws_secretsmanager_secret.mongodb[0].id
+}
+
 # --- MongoDB Atlas Logic ---
 resource "mongodbatlas_project" "starttech" {
   name   = var.project_name
@@ -69,7 +87,7 @@ resource "mongodbatlas_advanced_cluster" "main" {
 
 resource "mongodbatlas_database_user" "db_user" {
   username           = "admin"
-  password           = var.mongodb_atlas_password
+  password           = var.use_secrets_manager ? jsondecode(data.aws_secretsmanager_secret_version.mongodb[0].secret_string).mongodb_password : var.mongodb_atlas_password
   project_id         = mongodbatlas_project.starttech.id
   auth_database_name = "admin"
 
