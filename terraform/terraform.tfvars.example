@@ -11,8 +11,16 @@ min_size = 2
 max_size = 6
 desired_capacity = 2
 
-frontend_bucket_name = "starttech-frontend-bucket-unique-12345"
 log_group_name = "/aws/starttech/application"
+
+# MongoDB Atlas Configuration
+mongodb_atlas_public_key  = "your-public-key-here"
+mongodb_atlas_private_key = "your-private-key-here"
+mongodb_atlas_org_id      = "your-org-id-here"
+mongodb_atlas_password    = "your-secure-password-here"
+
+# S3 bucket name will be auto-generated with account ID to ensure uniqueness
+# Example: starttech-frontend-starttech-123456789012
 
 tags = {
   Project     = "StartTech"

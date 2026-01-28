@@ -2,7 +2,6 @@ terraform {
   required_version = ">= 1.0"
   
   backend "s3" {
-    bucket         = "your-unique-terraform-state-bucket" 
     key            = "state/terraform.tfstate"
     region         = "us-east-1"
     dynamodb_table = "terraform-lock"
@@ -31,6 +30,8 @@ provider "mongodbatlas" {
 }
 
 # --- Data Sources ---
+data "aws_caller_identity" "current" {}
+
 data "aws_availability_zones" "available" {
   state = "available"
 }
@@ -46,28 +47,29 @@ resource "mongodbatlas_advanced_cluster" "main" {
   name         = "${var.project_name}-cluster"
   cluster_type = "REPLICASET"
 
-  replication_specs = [
-    {
-      num_shards = 1
-      region_configs = [
-        {
-          priority      = 7
-          provider_name = "AWS"
-          region_name   = "US_EAST_1"
-          electable_specs = {
-            instance_size = "M0"
-          }
-        }
-      ]
+  replication_specs {
+    num_shards = 1
+    region_configs {
+      priority      = 7
+      provider_name = "AWS"
+      region_name   = "US_EAST_1"
+      electable_specs {
+        instance_size = "M0"
+        node_count    = 3
+      }
+      read_only_specs {
+        instance_size = "M0"
+        node_count    = 0
+      }
     }
-  ]
+  }
 }
 
 
 
 resource "mongodbatlas_database_user" "db_user" {
   username           = "admin"
-  password           = "password123" 
+  password           = var.mongodb_atlas_password
   project_id         = mongodbatlas_project.starttech.id
   auth_database_name = "admin"
 
@@ -107,7 +109,7 @@ module "compute" {
 
 module "storage" {
   source                    = "./modules/storage"
-  bucket_name               = "starttech-frontend-${var.project_name}"
+  bucket_name               = "starttech-frontend-${var.project_name}-${data.aws_caller_identity.current.account_id}"
   vpc_id                    = module.networking.vpc_id
   private_subnet_ids        = module.networking.private_subnet_ids
   backend_security_group_id = module.compute.backend_security_group_id
@@ -119,4 +121,55 @@ module "monitoring" {
   
   log_group_name = var.log_group_name
   tags           = var.tags
+}
+
+# --- ElastiCache Redis ---
+resource "aws_security_group" "redis" {
+  name_prefix = "${var.project_name}-redis-"
+  vpc_id      = module.networking.vpc_id
+  
+  ingress {
+    from_port       = 6379
+    to_port         = 6379
+    protocol        = "tcp"
+    security_groups = [module.compute.backend_security_group_id]
+  }
+  
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  
+  tags = var.tags
+}
+
+resource "aws_elasticache_subnet_group" "redis" {
+  name       = "${var.project_name}-redis-subnet-group"
+  subnet_ids = module.networking.private_subnet_ids
+  
+  tags = var.tags
+}
+
+resource "aws_elasticache_replication_group" "redis" {
+  replication_group_id       = "${var.project_name}-redis"
+  description                = "Redis cluster for ${var.project_name}"
+  engine                     = "redis"
+  engine_version             = "7.0"
+  node_type                  = "cache.t3.micro"
+  num_cache_clusters         = 2
+  automatic_failover_enabled = true
+  port                       = 6379
+  
+  subnet_group_name  = aws_elasticache_subnet_group.redis.name
+  security_group_ids = [aws_security_group.redis.id]
+  
+  at_rest_encryption_enabled = true
+  transit_encryption_enabled = true
+  transit_encryption_mode    = "preferred"
+  
+  tags = merge(var.tags, {
+    Name = "${var.project_name}-redis"
+  })
 }

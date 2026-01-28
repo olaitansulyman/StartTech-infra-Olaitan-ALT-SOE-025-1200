@@ -90,3 +90,9 @@ variable "mongodb_atlas_org_id" {
   description = "MongoDB Atlas Organization ID"
   type        = string
 }
+
+variable "mongodb_atlas_password" {
+  description = "MongoDB Atlas Database User Password"
+  type        = string
+  sensitive   = true
+}
