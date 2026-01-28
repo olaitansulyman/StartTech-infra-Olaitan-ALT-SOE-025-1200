@@ -22,3 +22,8 @@ output "cloudfront_domain_name" {
   description = "Domain name of the CloudFront distribution"
   value       = aws_cloudfront_distribution.frontend.domain_name
 }
+
+output "redis_endpoint" {
+  description = "Redis cluster endpoint"
+  value       = aws_elasticache_cluster.main.cache_nodes[0].address
+}

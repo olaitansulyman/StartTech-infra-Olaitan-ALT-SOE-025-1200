@@ -9,6 +9,9 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     env:
       AWS_REGION: us-east-1
     steps:
@@ -20,15 +23,32 @@ jobs:
       - name: Run tests
         run: |
           cd backend
-          go test ./... 
+          go test -v -cover ./... 
+      - name: Run security scan
+        run: |
+          cd backend
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+          gosec ./... || true
       - name: Build Docker image
         run: |
           cd backend
-          docker build -t starttech-backend:latest .
+          docker build -t starttech-backend:${{ github.sha }} -t starttech-backend:latest .
+      - name: Scan Docker image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: starttech-backend:latest
+          format: sarif
+          output: trivy-results.sarif
+          severity: HIGH,CRITICAL
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/starttech-github-actions-role
           aws-region: ${{ env.AWS_REGION }}
       - name: Login to ECR
         run: |
@@ -41,11 +61,13 @@ jobs:
       - name: Tag and push to ECR
         run: |
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          docker tag starttech-backend:latest ${ACCOUNT_ID}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/starttech-backend:${{ github.sha }}
           docker tag starttech-backend:latest ${ACCOUNT_ID}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/starttech-backend:latest
+          docker push ${ACCOUNT_ID}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/starttech-backend:${{ github.sha }}
           docker push ${ACCOUNT_ID}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/starttech-backend:latest
       - name: Trigger rolling update
         run: |
           ASG_NAME=${{ secrets.ASG_NAME }}
           aws autoscaling start-instance-refresh --auto-scaling-group-name $ASG_NAME --preferences MinHealthyPercentage=50,InstanceWarmup=300
-      - name: Notify
-        run: echo "Backend deployed"
+      - name: Notify success
+        run: echo "✅ Backend deployed successfully"

@@ -45,7 +45,7 @@ output "cloudfront_domain_name" {
 
 output "redis_endpoint" {
   description = "Redis cluster endpoint"
-  value       = aws_elasticache_replication_group.redis.primary_endpoint_address
+  value       = module.storage.redis_endpoint
 }
 
 output "log_group_name" {

@@ -108,3 +108,15 @@ variable "mongodb_secret_name" {
   type        = string
   default     = ""
 }
+
+variable "github_org" {
+  description = "GitHub organization name for OIDC"
+  type        = string
+  default     = "olaitansulyman"
+}
+
+variable "github_repo" {
+  description = "GitHub repository name for OIDC"
+  type        = string
+  default     = "StartTech-infra-Olaitan-ALT-SOE-025-1200"
+}

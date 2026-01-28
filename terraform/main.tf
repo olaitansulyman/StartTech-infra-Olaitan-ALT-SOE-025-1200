@@ -36,22 +36,17 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
-# --- Secrets Manager (optional) ---
-resource "aws_secretsmanager_secret" "mongodb" {
+# --- Secrets Manager (optional, data-only) ---
+# Note: Create secrets manually in AWS Secrets Manager or via GitHub Actions
+# This reads existing secrets, it does not create them via Terraform state
+data "aws_secretsmanager_secret" "mongodb" {
   count = var.use_secrets_manager ? 1 : 0
   name  = var.mongodb_secret_name != "" ? var.mongodb_secret_name : "${var.project_name}-mongodb"
-  tags  = var.tags
-}
-
-resource "aws_secretsmanager_secret_version" "mongodb" {
-  count       = var.use_secrets_manager ? 1 : 0
-  secret_id   = aws_secretsmanager_secret.mongodb[0].id
-  secret_string = jsonencode({ mongodb_password = var.mongodb_atlas_password })
 }
 
 data "aws_secretsmanager_secret_version" "mongodb" {
   count     = var.use_secrets_manager ? 1 : 0
-  secret_id = aws_secretsmanager_secret.mongodb[0].id
+  secret_id = data.aws_secretsmanager_secret.mongodb[0].id
 }
 
 # --- MongoDB Atlas Logic ---
@@ -141,53 +136,12 @@ module "monitoring" {
   tags           = var.tags
 }
 
-# --- ElastiCache Redis ---
-resource "aws_security_group" "redis" {
-  name_prefix = "${var.project_name}-redis-"
-  vpc_id      = module.networking.vpc_id
+# --- GitHub Actions OIDC ---
+module "github_oidc" {
+  source = "./modules/github-oidc"
   
-  ingress {
-    from_port       = 6379
-    to_port         = 6379
-    protocol        = "tcp"
-    security_groups = [module.compute.backend_security_group_id]
-  }
-  
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  
-  tags = var.tags
-}
-
-resource "aws_elasticache_subnet_group" "redis" {
-  name       = "${var.project_name}-redis-subnet-group"
-  subnet_ids = module.networking.private_subnet_ids
-  
-  tags = var.tags
-}
-
-resource "aws_elasticache_replication_group" "redis" {
-  replication_group_id       = "${var.project_name}-redis"
-  description                = "Redis cluster for ${var.project_name}"
-  engine                     = "redis"
-  engine_version             = "7.0"
-  node_type                  = "cache.t3.micro"
-  num_cache_clusters         = 2
-  automatic_failover_enabled = true
-  port                       = 6379
-  
-  subnet_group_name  = aws_elasticache_subnet_group.redis.name
-  security_group_ids = [aws_security_group.redis.id]
-  
-  at_rest_encryption_enabled = true
-  transit_encryption_enabled = true
-  transit_encryption_mode    = "preferred"
-  
-  tags = merge(var.tags, {
-    Name = "${var.project_name}-redis"
-  })
+  github_org   = var.github_org
+  github_repo  = var.github_repo
+  project_name = var.project_name
+  tags         = var.tags
 }
